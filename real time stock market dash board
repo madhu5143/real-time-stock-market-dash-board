@@ -1,0 +1,44 @@
+pip install streamlit pandas plotly requests
+import streamlit as st
+import pandas as pd
+import plotly.graph_objs as go
+import requests
+import time
+
+st.title("📈 Real-Time Stock Market Dashboard")
+
+# Enter your stock symbol
+stock_symbol = st.text_input("Enter Stock Symbol (Example: AAPL, MSFT, TSLA):", "AAPL")
+
+# Fetch stock data from Yahoo Finance API alternative
+def get_stock_data(symbol):
+    url = f"https://query1.finance.yahoo.com/v7/finance/chart/{symbol}?range=1d&interval=1m"
+    response = requests.get(url).json()
+    
+    try:
+        timestamps = response['chart']['result'][0]['timestamp']
+        prices = response['chart']['result'][0]['indicators']['quote'][0]['close']
+        
+        df = pd.DataFrame({
+            'Time': pd.to_datetime(timestamps, unit='s'),
+            'Price': prices
+        }).dropna()
+        return df
+    except:
+        return None
+
+# Real-time updating
+placeholder = st.empty()
+
+while True:
+    df = get_stock_data(stock_symbol)
+    if df is not None:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df['Time'], y=df['Price'], mode='lines', name='Price'))
+        fig.update_layout(title=f'{stock_symbol} Real-Time Price', xaxis_title='Time', yaxis_title='Price')
+
+        placeholder.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("Failed to fetch data. Check the stock symbol or internet connection.")
+
+    time.sleep(60)  # Refresh every minute
